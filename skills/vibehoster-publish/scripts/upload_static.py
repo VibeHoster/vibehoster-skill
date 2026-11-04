@@ -8,7 +8,7 @@ import urllib.error
 from urllib.parse import urlsplit
 import urllib.request
 
-URL = os.environ.get('VIBEHOSTER_UPLOAD_URL', 'http://localhost:18404/upload')
+URL = os.environ.get('VIBEHOSTER_UPLOAD_URL', 'https://mcp.vibehoster.ru/upload')
 LIMIT = 100 * 1024 * 1024
 
 
@@ -19,12 +19,13 @@ def main():
     ticket = sys.stdin.readline(201).strip()
     try:
         address = urlsplit(URL)
-        if (address.scheme != 'http' or address.hostname not in ('localhost', '127.0.0.1')
-                or address.username or address.password or not address.port or address.path != '/upload'
+        if (not ((address.scheme == 'https' and address.hostname == 'mcp.vibehoster.ru' and address.port in (None, 443))
+                 or (address.scheme == 'http' and address.hostname in ('localhost', '127.0.0.1') and address.port))
+                or address.username or address.password or address.path != '/upload'
                 or address.query or address.fragment):
             raise ValueError
     except ValueError:
-        print('Invalid local upload URL', file=sys.stderr)
+        print('Invalid upload URL', file=sys.stderr)
         return 1
     if not ticket.startswith('vh_upload_') or len(ticket) > 200:
         print('Invalid upload ticket', file=sys.stderr)

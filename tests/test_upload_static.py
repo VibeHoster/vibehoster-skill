@@ -14,13 +14,25 @@ spec.loader.exec_module(helper)
 
 
 class UploadHelperTests(unittest.TestCase):
+    def test_untrusted_upload_endpoints_are_rejected(self):
+        for url in ('https://attacker.example/upload', 'http://mcp.vibehoster.ru/upload',
+                    'https://mcp.vibehoster.ru.evil.example/upload',
+                    'https://user@mcp.vibehoster.ru/upload', 'https://mcp.vibehoster.ru/upload?redirect=evil'):
+            with self.subTest(url=url), patch.object(helper, 'URL', url), \
+                    patch.object(helper.sys, 'argv', ['upload_static.py', '/unused']), \
+                    patch.object(helper.sys, 'stdin', io.StringIO('vh_upload_test\n')), \
+                    patch.object(helper.urllib.request, 'urlopen') as send, \
+                    patch('sys.stderr', new_callable=io.StringIO):
+                self.assertEqual(helper.main(), 1)
+                send.assert_not_called()
+
     def test_ticket_is_sent_in_header_and_not_printed(self):
         class Response:
             def __enter__(self): return self
             def __exit__(self, *args): pass
             def read(self): return json.dumps({'url': 'http://site.example.test/'}).encode()
         def open_request(request, timeout):
-            self.assertEqual(request.full_url, 'http://localhost:18404/upload')
+            self.assertEqual(request.full_url, 'https://mcp.vibehoster.ru/upload')
             self.assertEqual(request.get_header('Authorization'), 'Bearer vh_upload_test')
             self.assertEqual(request.data.read(), b'zip-bytes')
             return Response()
